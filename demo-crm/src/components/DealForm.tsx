@@ -2,7 +2,7 @@
 
 import { Input, Select, SelectItem, Button } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface Org {
   id: string;
@@ -32,6 +32,70 @@ interface DealFormProps {
     contactId: string;
     ownerId: string;
   };
+}
+
+function ContactSelect({ organizationId, contacts, value, onChange }: {
+  organizationId: string;
+  contacts: Contact[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = contacts.find((c) => c.id === value);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const label = `Contact${organizationId ? ` (${contacts.length} available)` : ""}`;
+  const isFloating = !!value || open;
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full h-14 rounded-xl border-2 bg-transparent px-3 text-left text-sm outline-none transition-colors flex items-center justify-between
+          ${open ? "border-primary" : "border-default-200 hover:border-default-400"}`}
+      >
+        <span className="pt-4 pb-1 truncate text-foreground">
+          {selected ? `${selected.firstName} ${selected.lastName}` : ""}
+        </span>
+        <svg height="16" width="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-foreground-500">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      <label className={`pointer-events-none absolute left-3 transition-all duration-100 text-foreground-500 ${open ? "text-primary" : ""} ${isFloating ? "top-1.5 text-xs" : "top-1/2 -translate-y-1/2 text-sm"}`}>
+        {label}<span className="ml-0.5 text-danger">*</span>
+      </label>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-xl border border-default-200 bg-content1 shadow-lg overflow-hidden">
+          {contacts.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-foreground-500">No contacts available</div>
+          ) : (
+            contacts.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { onChange(c.id); setOpen(false); }}
+                className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-default-100
+                  ${c.id === value ? "bg-default-100 text-primary font-medium" : "text-foreground"}`}
+              >
+                {c.firstName} {c.lastName}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const stages = [
@@ -168,21 +232,12 @@ export default function DealForm({ deal }: DealFormProps) {
         ))}
       </Select>
 
-      <Select
-        label={`Contact${organizationId ? ` (${filteredContacts.length} available)` : ""}`}
-        variant="bordered"
-        placeholder="Select contact"
-        selectedKeys={contactId ? [contactId] : []}
-        onSelectionChange={(keys) => {
-          const selected = Array.from(keys)[0] as string;
-          setContactId(selected || "");
-        }}
-        isRequired
-      >
-        {filteredContacts.map((c) => (
-          <SelectItem key={c.id}>{c.firstName} {c.lastName}</SelectItem>
-        ))}
-      </Select>
+      <ContactSelect
+        organizationId={organizationId}
+        contacts={filteredContacts}
+        value={contactId}
+        onChange={setContactId}
+      />
 
       <Select
         label="Owner"
