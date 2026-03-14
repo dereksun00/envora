@@ -45,6 +45,24 @@ export async function launchContainer(
 }
 
 /**
+ * Stop a running Docker container (preserves data).
+ */
+export async function stopContainer(containerId: string): Promise<void> {
+  const docker = new Docker();
+  const container = docker.getContainer(containerId);
+  await container.stop();
+}
+
+/**
+ * Start a stopped Docker container.
+ */
+export async function startContainer(containerId: string): Promise<void> {
+  const docker = new Docker();
+  const container = docker.getContainer(containerId);
+  await container.start();
+}
+
+/**
  * Destroy a Docker container. Swallows errors.
  */
 export async function destroyContainer(containerId: string): Promise<void> {

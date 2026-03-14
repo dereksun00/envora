@@ -1,12 +1,18 @@
 import type {
   Project,
+  ProjectListItem,
   ProjectWithDetails,
   Scenario,
   Sandbox,
+  SandboxWithContext,
+  OverviewStats,
   CreateProjectRequest,
   CreateScenarioRequest,
   CreateSandboxRequest,
-} from "../../shared/types";
+  UpdateSandboxRequest,
+  UpdateScenarioRequest,
+  ListSandboxesQuery,
+} from "@shared/types";
 
 const API_BASE = "/api";
 
@@ -19,10 +25,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || res.statusText);
   }
+  // Handle 204 No Content
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
-export function listProjects(): Promise<Project[]> {
+// ---- Overview ----
+
+export function getOverview(): Promise<OverviewStats> {
+  return request("/overview");
+}
+
+// ---- Projects ----
+
+export function listProjects(): Promise<ProjectListItem[]> {
   return request("/projects");
 }
 
@@ -34,6 +50,8 @@ export function createProject(data: CreateProjectRequest): Promise<Project> {
   return request("/projects", { method: "POST", body: JSON.stringify(data) });
 }
 
+// ---- Scenarios ----
+
 export function createScenario(
   projectId: string,
   data: CreateScenarioRequest
@@ -44,12 +62,63 @@ export function createScenario(
   });
 }
 
+export function updateScenario(
+  projectId: string,
+  scenarioId: string,
+  data: UpdateScenarioRequest
+): Promise<Scenario> {
+  return request(`/projects/${projectId}/scenarios/${scenarioId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteScenario(
+  projectId: string,
+  scenarioId: string
+): Promise<void> {
+  return request(`/projects/${projectId}/scenarios/${scenarioId}`, {
+    method: "DELETE",
+  });
+}
+
+export function duplicateScenario(
+  projectId: string,
+  scenarioId: string
+): Promise<Scenario> {
+  return request(`/projects/${projectId}/scenarios/${scenarioId}/duplicate`, {
+    method: "POST",
+  });
+}
+
+// ---- Sandboxes ----
+
+export function listSandboxes(
+  query?: ListSandboxesQuery
+): Promise<SandboxWithContext[]> {
+  const params = new URLSearchParams();
+  if (query?.status) params.set("status", query.status);
+  if (query?.projectId) params.set("projectId", query.projectId);
+  const qs = params.toString();
+  return request(`/sandboxes${qs ? `?${qs}` : ""}`);
+}
+
 export function createSandbox(data: CreateSandboxRequest): Promise<Sandbox> {
   return request("/sandboxes", { method: "POST", body: JSON.stringify(data) });
 }
 
 export function getSandbox(id: string): Promise<Sandbox> {
   return request(`/sandboxes/${id}`);
+}
+
+export function updateSandbox(
+  id: string,
+  data: UpdateSandboxRequest
+): Promise<Sandbox> {
+  return request(`/sandboxes/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 export function destroySandbox(id: string): Promise<Sandbox> {

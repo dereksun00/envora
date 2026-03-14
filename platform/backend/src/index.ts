@@ -11,6 +11,7 @@ import cors from "cors";
 import { projectRoutes } from "./routes/projects.js";
 import { scenarioRoutes } from "./routes/scenarios.js";
 import { sandboxRoutes } from "./routes/sandboxes.js";
+import { overviewRoutes } from "./routes/overview.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -24,6 +25,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // Routes
+app.use("/api/overview", overviewRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/sandboxes", sandboxRoutes);
 // Scenario routes are nested: /api/projects/:id/scenarios

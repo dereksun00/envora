@@ -13,7 +13,7 @@ import {
   Icon,
 } from "@blueprintjs/core"
 import { createProject } from "@/lib/api"
-import type { SchemaFormat } from "../../../shared/types"
+import type { SchemaFormat } from "@shared/types"
 
 export default function CreateProjectPage() {
   const router = useRouter()
@@ -75,7 +75,7 @@ export default function CreateProjectPage() {
             label="Schema"
             labelFor="schema"
             labelInfo={
-              <ButtonGroup minimal small style={{ marginLeft: 8 }}>
+              <ButtonGroup minimal style={{ marginLeft: 8 }}>
                 <Button active={schemaFormat === "prisma"} onClick={() => setSchemaFormat("prisma")} small>
                   Prisma
                 </Button>

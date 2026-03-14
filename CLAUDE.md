@@ -2,7 +2,9 @@
 
 ## What This Project Is
 
-A platform that provisions isolated demo environments (sandboxes) with AI-generated data. Each sandbox gets its own Postgres database and Docker container running a demo app (currently a CRM). The AI generates realistic seed data from a natural language prompt.
+A platform that provisions isolated demo environments (sandboxes) with AI-generated data for sales demos and QA testing. Each sandbox gets its own Postgres database and Docker container running a demo app (currently a CRM). The AI generates realistic seed data from a natural language prompt.
+
+Teams can define reusable scenarios that control what data a sandbox contains. When a scenario runs, it produces a fresh, shareable sandbox with synthetic data, role-based access, and lifecycle controls (stop, start, reset, extend, destroy).
 
 The **demo CRM app** (`demo-crm/`) is already built and working. It's a standalone Next.js app with full CRUD. The sandbox platform treats it as an opaque Docker image.
 
@@ -12,43 +14,44 @@ The **sandbox platform** (`platform/`) is the control panel that manages project
 
 ```
 envora/
-├── demo-crm/                    # ✅ DONE — Standalone CRM app (separate concern)
+├── demo-crm/                    # Standalone CRM app (separate concern)
 ├── platform/
 │   ├── shared/
-│   │   └── types.ts             # ⚡ SINGLE SOURCE OF TRUTH for all API shapes
+│   │   └── types.ts             # SINGLE SOURCE OF TRUTH for all API shapes
 │   ├── api-spec.yaml            # OpenAPI 3.0 spec for all endpoints
 │   ├── backend/                 # Express + TypeScript API server
 │   │   ├── prisma/schema.prisma # Platform DB (SQLite) — NOT sandbox DBs
 │   │   ├── src/
 │   │   │   ├── index.ts         # Express entry point (port 4000)
-│   │   │   ├── routes/          # API route handlers
-│   │   │   │   ├── projects.ts
-│   │   │   │   ├── scenarios.ts
-│   │   │   │   └── sandboxes.ts
-│   │   │   └── lib/             # Core pipeline modules
+│   │   │   ├── routes/
+│   │   │   │   ├── overview.ts  # GET /api/overview (dashboard stats)
+│   │   │   │   ├── projects.ts  # CRUD projects (with counts)
+│   │   │   │   ├── scenarios.ts # CRUD scenarios (create/update/delete/duplicate)
+│   │   │   │   └── sandboxes.ts # Sandbox lifecycle (create/stop/start/reset/extend/destroy)
+│   │   │   └── lib/
 │   │   │       ├── db.ts        # Prisma client singleton
 │   │   │       ├── generate.ts  # Claude API → SQL INSERT statements
 │   │   │       ├── seed-with-retry.ts  # Execute SQL with AI-powered retry
-│   │   │       ├── docker.ts    # Container lifecycle (dockerode)
+│   │   │       ├── docker.ts    # Container lifecycle (launch/stop/start/destroy)
 │   │   │       └── provision.ts # Orchestrator tying it all together
 │   │   └── scripts/
-│   │       └── test-pipeline.ts # E2E pipeline test (run before any UI work)
+│   │       └── test-pipeline.ts # E2E pipeline test
 │   ├── frontend/                # Next.js 14 App Router (port 3001)
-│   │   ├── src/app/             # 5 pages
+│   │   ├── src/app/             # 7 routes (see below)
 │   │   ├── src/lib/api.ts       # Typed fetch wrapper for backend API
-│   │   └── src/components/      # ThemeProvider + Sidebar
+│   │   └── src/components/      # Reusable components
 │   └── test-fixtures/           # Pre-validated demo data
 │       ├── demo-crm-schema.prisma
 │       ├── demo-seed.sql
 │       └── demo-scenario.json
-└── CLAUDE.md                    # ← You are here
+└── CLAUDE.md                    # You are here
 ```
 
 ## Architecture
 
 | Layer | Tech | Port |
 |-------|------|------|
-| Frontend | Next.js 14 App Router + **Blueprint.js** (Palantir) | 3001 |
+| Frontend | Next.js 14 App Router + **Blueprint.js 5** (Palantir) | 3001 |
 | Backend API | Express + TypeScript | 4000 |
 | Platform DB | SQLite via Prisma | file |
 | Sandbox DBs | Postgres 16 (Docker, one DB per sandbox) | 5432 |
@@ -66,44 +69,70 @@ Frontend proxies `/api/*` to `localhost:4000` via Next.js rewrites.
 5. **Prisma client from `lib/db.ts` only** — do NOT create new PrismaClient instances.
 6. **Docker containers use DNS name `sandbox-postgres` in DATABASE_URL, NOT localhost.**
 7. **Frontend uses Blueprint.js (`@blueprintjs/core`, `@blueprintjs/icons`) + plain CSS. NO Tailwind. NO shadcn/ui.**
-8. **Blueprint dark mode: `bp5-dark` class on `<body>`. ThemeProvider in `src/components/theme-provider.tsx` manages the toggle. Components auto-adapt.**
-9. **Frontend pages follow the data-fetching pattern established in `app/page.tsx` (Dashboard).**
+8. **Blueprint dark mode: `bp5-dark` class on `<body>`. ThemeProvider manages the toggle. Components auto-adapt.**
+9. **Frontend imports shared types via `@shared/types` path alias (configured in tsconfig.json).**
 
 ## Frontend UI Stack
 
-- **Component library**: `@blueprintjs/core` v5 — Button, Card, Tag, Alert, Callout, FormGroup, InputGroup, TextArea, Spinner, NonIdealState, Icon, ButtonGroup
-- **Icons**: `@blueprintjs/icons` v5 — Blueprint's built-in icon set (NOT lucide-react)
+- **Component library**: `@blueprintjs/core` v5 — Button, Card, Tag, Alert, Callout, Dialog, FormGroup, InputGroup, TextArea, HTMLSelect, HTMLTable, Spinner, NonIdealState, Icon, ButtonGroup, Menu, MenuItem, Popover
+- **Icons**: `@blueprintjs/icons` v5 — Blueprint's built-in icon set
 - **Dark/Light mode**: `bp5-dark` class toggle via ThemeProvider + localStorage persistence
-- **Styling**: Blueprint CSS + `globals.css` (plain CSS). No Tailwind, no CSS modules, no styled-components.
-- **Key Blueprint patterns**:
-  - `<Card interactive>` for clickable cards
-  - `<Tag intent="success" minimal round>` for status badges
-  - `<Alert>` for destructive action confirmations
-  - `<Callout intent="...">` for success/error banners
-  - `<NonIdealState>` for empty states
-  - `<FormGroup>` + `<InputGroup>` for forms
-  - `<ButtonGroup minimal>` for toggles (e.g., Prisma/SQL format)
-  - `<Spinner>` for loading states
+- **Styling**: Blueprint CSS + `globals.css` (plain CSS). No Tailwind, no CSS modules.
 
-## The 5 Frontend Pages (Build Order)
+## The 7 Frontend Routes
 
-1. **Dashboard** (`/`) — Project list, active sandbox count, "New Project" button
-2. **Create Project** (`/projects/new`) — Form: name, docker image, schema textarea, format toggle, port
-3. **Project Detail** (`/projects/[id]`) — Schema preview, scenario list with "Launch" buttons
-4. **Create Scenario** (`/projects/[id]/scenarios/new`) — Form: name, prompt, demo users list
-5. **Sandbox Status** (`/sandboxes/[id]`) — Polling step indicator, URL display, destroy button
+| Route | Purpose |
+|-------|---------|
+| `/` | **Overview dashboard** — stat cards, quick-launch widget, recent sandboxes table |
+| `/projects` | **Projects list** — card grid with scenario/sandbox counts |
+| `/projects/new` | **Create Project** — form with schema textarea, format toggle |
+| `/projects/[id]` | **Project Detail** — schema, scenario cards with hover actions (launch/edit/duplicate/delete), sandbox table, create/edit scenario dialog |
+| `/projects/[id]/scenarios/new` | Redirect to project detail (scenario creation uses a Dialog) |
+| `/sandboxes` | **All Sandboxes** — filterable table with lifecycle actions |
+| `/sandboxes/[id]` | **Sandbox Detail** — status badge, lifecycle controls, provisioning step indicator, URL display |
 
-## The 7 API Endpoints
+## Frontend Components
+
+| Component | Purpose |
+|-----------|---------|
+| `sidebar.tsx` | Navigation: Overview, Projects, Sandboxes + theme toggle |
+| `theme-provider.tsx` | Dark/light mode context + localStorage |
+| `stat-card.tsx` | Metric card (icon, value, label) for Overview |
+| `quick-launch.tsx` | Project + Scenario dropdowns + Launch button |
+| `sandbox-table.tsx` | Reusable sandbox table with status badges + inline actions |
+| `sandbox-actions.tsx` | Contextual action buttons per sandbox status |
+| `sandbox-status-badge.tsx` | Status tag for all 6 sandbox states |
+| `scenario-card.tsx` | Scenario card with hover-reveal action bar |
+| `create-scenario-dialog.tsx` | Blueprint Dialog for create/edit scenario |
+
+## The API Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/projects` | List all projects |
+| GET | `/api/overview` | Dashboard stats (counts + recent sandboxes) |
+| GET | `/api/projects` | List projects with scenario/sandbox counts |
 | POST | `/api/projects` | Create project |
 | GET | `/api/projects/:id` | Get project with scenarios + sandboxes |
 | POST | `/api/projects/:id/scenarios` | Create scenario |
+| PUT | `/api/projects/:id/scenarios/:scenarioId` | Update scenario |
+| DELETE | `/api/projects/:id/scenarios/:scenarioId` | Delete scenario |
+| POST | `/api/projects/:id/scenarios/:scenarioId/duplicate` | Duplicate scenario |
+| GET | `/api/sandboxes` | List all sandboxes (filter by status/project) |
 | POST | `/api/sandboxes` | Create sandbox + start async provisioning |
 | GET | `/api/sandboxes/:id` | Get sandbox status (poll every 2s) |
+| PATCH | `/api/sandboxes/:id` | Lifecycle actions (stop/start/reset/extend) |
 | DELETE | `/api/sandboxes/:id` | Destroy sandbox |
+
+## Sandbox Lifecycle
+
+| Status | Available Actions |
+|--------|------------------|
+| `provisioning` | (view only) |
+| `running` | Open URL, Stop, Reset, Extend, Destroy |
+| `stopped` | Start, Reset, Destroy |
+| `failed` | Reset, Destroy |
+| `expired` | Start (re-extends), Reset, Destroy |
+| `destroyed` | (no actions) |
 
 ## The Provisioning Pipeline (7 Steps)
 
@@ -114,17 +143,6 @@ Frontend proxies `/api/*` to `localhost:4000` via Next.js rewrites.
 5. Launch Docker container
 6. Poll for app readiness (30s timeout)
 7. Set status to "running" with URL
-
-## File Ownership (for parallel work)
-
-```
-platform/backend/**           ← Backend engineer
-platform/frontend/**          ← Frontend engineer
-platform/shared/types.ts      ← Shared (announce changes verbally)
-platform/api-spec.yaml        ← Shared (reference only)
-platform/test-fixtures/**     ← Testing/integration lead
-demo-crm/**                   ← Already done, don't touch
-```
 
 ## Dev Setup
 

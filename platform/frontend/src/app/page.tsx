@@ -1,76 +1,62 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button, Card, Icon, NonIdealState } from "@blueprintjs/core"
-import { listProjects } from "@/lib/api"
-import type { Project } from "../../shared/types"
+import { Spinner } from "@blueprintjs/core"
+import { getOverview } from "@/lib/api"
+import { StatCard } from "@/components/stat-card"
+import { QuickLaunch } from "@/components/quick-launch"
+import { SandboxTable } from "@/components/sandbox-table"
+import type { OverviewStats } from "@shared/types"
 
-export default function DashboardPage() {
-  const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
+export default function OverviewPage() {
+  const [stats, setStats] = useState<OverviewStats | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    listProjects()
-      .then(setProjects)
-      .finally(() => setLoading(false))
-  }, [])
+  function load() {
+    getOverview().then(setStats).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "80px 0" }}>
+        <Spinner size={30} />
+      </div>
+    )
+  }
+
+  if (!stats) return null
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Projects</h1>
-          <p className="page-subtitle">
-            {projects.length} project{projects.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Button intent="primary" icon="plus" onClick={() => router.push("/projects/new")}>
-          New Project
-        </Button>
+      <h1 className="page-title mb-24">Overview</h1>
+
+      {/* Stat cards */}
+      <div className="stat-grid mb-24">
+        <StatCard icon="projects" value={stats.projectCount} label="Projects" intent="primary" />
+        <StatCard icon="lightbulb" value={stats.scenarioCount} label="Scenarios" intent="primary" />
+        <StatCard icon="play" value={stats.activeSandboxCount} label="Active Sandboxes" intent="success" />
+        <StatCard icon="error" value={stats.failedSandboxCount} label="Failed" intent="danger" />
       </div>
 
-      {loading ? (
-        <div className="card-grid">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton" style={{ height: 120 }} />
-          ))}
-        </div>
-      ) : projects.length === 0 ? (
-        <Card className="empty-card">
-          <NonIdealState
-            icon="cube"
-            title="No projects yet"
-            description="Create your first project to start provisioning sandboxes."
-            action={
-              <Button intent="primary" icon="plus" onClick={() => router.push("/projects/new")}>
-                New Project
-              </Button>
-            }
-          />
-        </Card>
-      ) : (
-        <div className="card-grid">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              interactive
-              className="project-card"
-              onClick={() => router.push(`/projects/${project.id}`)}
-            >
-              <div className="project-card-title">
-                <Icon icon="cube" size={16} style={{ color: "#2d72d2" }} />
-                {project.name}
-              </div>
-              <div className="project-card-meta">{project.dockerImage}</div>
-              <div className="project-card-meta" style={{ marginTop: 6 }}>
-                Port {project.appPort}
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Quick Launch */}
+      <div className="mb-24">
+        <h3 className="section-heading">Quick Launch</h3>
+        <QuickLaunch />
+      </div>
+
+      {/* Recent Sandboxes */}
+      <div>
+        <h3 className="section-heading">Recent Sandboxes</h3>
+        <SandboxTable
+          sandboxes={stats.recentSandboxes}
+          onRefresh={load}
+          showProject
+          showScenario
+          emptyMessage="No sandboxes yet. Launch one above!"
+        />
+      </div>
     </div>
   )
 }

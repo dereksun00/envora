@@ -15,8 +15,12 @@ export type SchemaFormat = "prisma" | "sql";
 export type SandboxStatus =
   | "provisioning"
   | "running"
+  | "stopped"
   | "failed"
+  | "expired"
   | "destroyed";
+
+export type SandboxAction = "stop" | "start" | "reset" | "extend";
 
 export type ProvisioningStep =
   | "creating_database"
@@ -70,6 +74,22 @@ export interface Sandbox {
   url: string | null;
   expiresAt: string; // ISO 8601
   createdAt: string;
+  updatedAt: string;
+}
+
+// ---- Enriched Response Models ----
+
+export interface SandboxWithContext extends Sandbox {
+  projectName: string;
+  scenarioName: string;
+}
+
+export interface ProjectListItem extends Project {
+  _count: {
+    scenarios: number;
+    sandboxes: number;
+  };
+  activeSandboxCount: number;
 }
 
 // ---- API Request Bodies ----
@@ -95,11 +115,36 @@ export interface CreateSandboxRequest {
   useWarmStart?: boolean; // skip AI generation, use cached SQL
 }
 
+export interface UpdateSandboxRequest {
+  action: SandboxAction;
+  extendMinutes?: number; // only for "extend" action, default 120
+}
+
+export interface UpdateScenarioRequest {
+  name?: string;
+  prompt?: string;
+  demoUsers?: DemoUser[];
+  featureFlags?: Record<string, boolean>;
+}
+
 // ---- API Response Shapes ----
 
 export interface ProjectWithDetails extends Project {
   scenarios: Scenario[];
   sandboxes: Sandbox[];
+}
+
+export interface OverviewStats {
+  projectCount: number;
+  scenarioCount: number;
+  activeSandboxCount: number;
+  failedSandboxCount: number;
+  recentSandboxes: SandboxWithContext[];
+}
+
+export interface ListSandboxesQuery {
+  status?: SandboxStatus;
+  projectId?: string;
 }
 
 export interface ApiError {

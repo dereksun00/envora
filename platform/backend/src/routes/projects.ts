@@ -24,8 +24,22 @@ projectRoutes.use("/:projectId/scenarios", scenarioRoutes);
 projectRoutes.get("/", async (_req, res) => {
   const projects = await prisma.project.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { scenarios: true, sandboxes: true } },
+      sandboxes: {
+        where: { status: { in: ["running", "provisioning"] } },
+        select: { id: true },
+      },
+    },
   });
-  res.json(projects);
+
+  const result = projects.map((p) => ({
+    ...p,
+    activeSandboxCount: p.sandboxes.length,
+    sandboxes: undefined,
+  }));
+
+  res.json(result);
 });
 
 // POST /api/projects
