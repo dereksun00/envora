@@ -36,12 +36,14 @@ Rules (MUST follow all):
       ? `\n\nDemo users to include (these specific users MUST appear in the data):\n${JSON.stringify(params.demoUsers, null, 2)}`
       : "";
 
+  const scenarioPrompt = params.scenarioPrompt.replace(/\.{2,}\s*$/, "").trim();
+
   const userPrompt = `Generate SQL INSERT statements for the following ${params.schemaFormat === "prisma" ? "Prisma" : "SQL"} schema.
 
 Schema:
 ${params.schema}
 
-Scenario: ${params.scenarioPrompt}${demoUsersText}
+Scenario: ${scenarioPrompt}${demoUsersText}
 
 Output raw SQL INSERT statements only. No markdown fences, no commentary.`;
 
