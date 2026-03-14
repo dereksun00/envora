@@ -50,6 +50,10 @@ export function createProject(data: CreateProjectRequest): Promise<Project> {
   return request("/projects", { method: "POST", body: JSON.stringify(data) });
 }
 
+export function deleteProject(id: string): Promise<void> {
+  return request(`/projects/${id}`, { method: "DELETE" });
+}
+
 // ---- Scenarios ----
 
 export function createScenario(

@@ -9,7 +9,7 @@ import {
   Spinner,
   NonIdealState,
 } from "@blueprintjs/core"
-import { getProject, createSandbox, deleteScenario, duplicateScenario } from "@/lib/api"
+import { getProject, createSandbox, deleteScenario, duplicateScenario, deleteProject } from "@/lib/api"
 import { ScenarioCard } from "@/components/scenario-card"
 import { CreateScenarioDialog } from "@/components/create-scenario-dialog"
 import { SandboxTable } from "@/components/sandbox-table"
@@ -41,6 +41,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
   const [launchingScenario, setLaunchingScenario] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editScenario, setEditScenario] = useState<Scenario | null>(null)
+  const [deletingProject, setDeletingProject] = useState(false)
 
   function load() {
     getProject(params.id).then(setProject).finally(() => setLoading(false))
@@ -73,6 +74,17 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     setDialogOpen(true)
   }
 
+  async function handleDeleteProject() {
+    if (!confirm(`Delete project "${project?.name}"? This cannot be undone.`)) return
+    setDeletingProject(true)
+    try {
+      await deleteProject(params.id)
+      router.push("/projects")
+    } finally {
+      setDeletingProject(false)
+    }
+  }
+
   function handleNewScenario() {
     setEditScenario(null)
     setDialogOpen(true)
@@ -101,6 +113,15 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
             {project.dockerImage} &middot; port {project.appPort}
           </p>
         </div>
+        <Button
+          intent="danger"
+          icon="trash"
+          minimal
+          loading={deletingProject}
+          onClick={handleDeleteProject}
+        >
+          Delete Project
+        </Button>
       </div>
 
       {/* Schema */}

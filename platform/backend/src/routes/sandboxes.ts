@@ -109,6 +109,14 @@ sandboxRoutes.post("/", async (req, res) => {
   res.status(201).json(sandbox);
 });
 
+// GET /api/sandboxes
+sandboxRoutes.get("/", async (req, res) => {
+  const sandboxes = await prisma.sandbox.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(sandboxes);
+});
+
 // GET /api/sandboxes/:id
 sandboxRoutes.get("/:id", async (req, res) => {
   let sandbox = await prisma.sandbox.findUnique({

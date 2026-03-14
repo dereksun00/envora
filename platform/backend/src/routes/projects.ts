@@ -65,6 +65,21 @@ projectRoutes.post("/", async (req, res) => {
   res.status(201).json(project);
 });
 
+// DELETE /api/projects/:id
+projectRoutes.delete("/:id", async (req, res) => {
+  const project = await prisma.project.findUnique({
+    where: { id: req.params.id },
+  });
+
+  if (!project) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  await prisma.project.delete({ where: { id: req.params.id } });
+  res.status(204).end();
+});
+
 // GET /api/projects/:id
 projectRoutes.get("/:id", async (req, res) => {
   const project = await prisma.project.findUnique({
