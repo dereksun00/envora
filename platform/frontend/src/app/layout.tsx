@@ -1,37 +1,27 @@
-// =============================================================================
-// Root Layout — Sidebar + Main Content Area
-// =============================================================================
-// Fixed left sidebar (240px, dark bg) with nav links:
-//   Dashboard, Projects (future: Settings)
-// Top header: "Envora — Sandbox Platform"
-// Main content fills remaining width.
-// =============================================================================
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { Sidebar } from "../components/sidebar"
 
-import type { Metadata } from "next";
-import "./globals.css";
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Envora — Sandbox Platform",
   description: "Provision isolated demo environments with AI-generated data",
-};
+}
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // TODO: Implement sidebar + header layout
-  // - Fixed left sidebar (240px, dark bg) with:
-  //   - Logo/brand: "Envora"
-  //   - Nav links with lucide-react icons:
-  //     - Dashboard → /
-  //     - Projects → /projects (list of all projects)
-  //   - Active route should be highlighted
-  // - Top header bar: "Sandbox Platform" + subtle border-bottom
-  // - Main content area: {children}
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={`${inter.className} dark flex h-screen bg-background text-foreground`}>
+        <Sidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <header className="flex h-14 items-center border-b border-border px-6">
+            <span className="text-sm text-muted-foreground">Sandbox Platform</span>
+          </header>
+          <main className="flex-1 overflow-auto p-6">{children}</main>
+        </div>
+      </body>
     </html>
-  );
+  )
 }
