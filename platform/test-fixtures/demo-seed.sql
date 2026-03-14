@@ -1,0 +1,24 @@
+-- =============================================================================
+-- Demo Seed SQL
+-- =============================================================================
+-- TODO: Generate this using the Claude API with the prompt from demo-scenario.json
+-- against the schema from demo-crm-schema.prisma.
+--
+-- Requirements:
+-- - Dependency-ordered inserts (Organizations → Users → Contacts → Deals → Activities)
+-- - All foreign keys must reference existing records
+-- - Realistic data: 3 orgs, 50 users, 80 contacts, 200 deals, 500 activities
+-- - Enum values must match exactly: startup/mid_market/enterprise, etc.
+-- - Timestamps spread across the last 6 months
+-- - ~30% NULLs in nullable columns
+-- - Dollar amounts: enterprise $200K-$500K, mid-market $20K-$80K, startup $5K-$15K
+--
+-- Validate by:
+-- 1. Apply schema to fresh Postgres: prisma db push
+-- 2. Run this SQL
+-- 3. Launch CRM Docker container
+-- 4. Verify: dashboard loads, all lists render, create a deal, edit a contact, delete an activity
+-- =============================================================================
+
+-- Placeholder — replace with actual generated SQL
+SELECT 'TODO: Generate seed data' AS status;

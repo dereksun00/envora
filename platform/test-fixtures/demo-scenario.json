@@ -1,0 +1,21 @@
+{
+  "name": "Enterprise Demo",
+  "prompt": "Generate realistic CRM data for a B2B SaaS company. Include 3 organizations: one Fortune 500 enterprise (in late-stage negotiation on large $200K-$500K deals), one mid-market company (mix of pipeline stages, $20K-$80K deals), and one startup (early-pipeline with smaller $5K-$15K deals). Create 50 users distributed across the organizations, 80 contacts with realistic names and titles, 200 deals across all pipeline stages with realistic dollar amounts, and 500 activities (calls, emails, meetings, notes) spread across the last 6 months. The data should tell a coherent story where the enterprise account has senior contacts and multiple stakeholders, the mid-market has a growing pipeline, and the startup is just getting started.",
+  "demoUsers": [
+    {
+      "name": "Sarah Chen",
+      "email": "sarah@demo.envora.dev",
+      "role": "admin"
+    },
+    {
+      "name": "Marcus Johnson",
+      "email": "marcus@demo.envora.dev",
+      "role": "sales_manager"
+    },
+    {
+      "name": "Priya Patel",
+      "email": "priya@demo.envora.dev",
+      "role": "sales_rep"
+    }
+  ]
+}

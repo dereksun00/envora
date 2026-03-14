@@ -1,0 +1,60 @@
+// =============================================================================
+// Platform Database Schema (SQLite)
+// =============================================================================
+// This is the platform's OWN database — NOT the sandbox databases.
+// Sandbox databases are Postgres, managed by the provisioning pipeline.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  name         String
+  dockerImage  String
+  schema       String   // Raw Prisma schema or SQL DDL text
+  schemaFormat String   @default("prisma") // "prisma" | "sql"
+  appPort      Int      @default(3000)
+  createdAt    DateTime @default(now())
+
+  scenarios Scenario[]
+  sandboxes Sandbox[]
+}
+
+model Scenario {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  prompt       String
+  generatedSQL String?  // Cached SQL from AI generation
+  demoUsers    String   @default("[]") // JSON string of DemoUser[]
+  featureFlags String   @default("{}") // JSON string of Record<string, boolean>
+  createdAt    DateTime @default(now())
+
+  sandboxes Sandbox[]
+}
+
+model Sandbox {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenarioId    String
+  scenario      Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  subdomain     String   @unique
+  containerId   String?
+  hostPort      Int?
+  databaseName  String   @unique
+  status        String   @default("provisioning") // SandboxStatus
+  statusMessage String   @default("Initializing...")
+  currentStep   String?  // ProvisioningStep
+  url           String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+}
