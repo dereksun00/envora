@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button, Alert } from "@blueprintjs/core"
 import { updateSandbox, destroySandbox } from "@/lib/api"
 import type { SandboxStatus } from "@shared/types"
@@ -20,6 +21,7 @@ export function SandboxActions({
   onAction,
   compact = false,
 }: SandboxActionsProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<string | null>(null)
 
@@ -52,7 +54,7 @@ export function SandboxActions({
             minimal={minimal}
             icon="share"
             intent="primary"
-            onClick={() => window.open(url, "_blank")}
+            onClick={() => router.push(`/sandboxes/${sandboxId}/view`)}
           >
             {!compact && "Open"}
           </Button>
