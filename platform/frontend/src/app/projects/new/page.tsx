@@ -22,6 +22,8 @@ export default function CreateProjectPage() {
   const [schema, setSchema] = useState("")
   const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>("prisma")
   const [appPort, setAppPort] = useState(3000)
+  const [appSourceCode, setAppSourceCode] = useState("")
+  const [showSourceCode, setShowSourceCode] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,7 +32,7 @@ export default function CreateProjectPage() {
     setSubmitting(true)
     setError(null)
     try {
-      const project = await createProject({ name, dockerImage, schema, schemaFormat, appPort })
+      const project = await createProject({ name, dockerImage, schema, schemaFormat, appPort, appSourceCode: appSourceCode || undefined })
       router.push(`/projects/${project.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project")
@@ -112,6 +114,34 @@ export default function CreateProjectPage() {
               style={{ maxWidth: 160 }}
             />
           </FormGroup>
+
+          <div className="mb-16">
+            <Button
+              minimal
+              small
+              icon={showSourceCode ? "chevron-down" : "chevron-right"}
+              onClick={() => setShowSourceCode(!showSourceCode)}
+              style={{ marginBottom: 8 }}
+            >
+              Source Code (optional)
+            </Button>
+            {showSourceCode && (
+              <FormGroup
+                helperText="Paste your app's source code to generate a UI glossary immediately. If left empty, the glossary will be auto-extracted from the Docker image."
+              >
+                <TextArea
+                  id="appSourceCode"
+                  className="mono-input"
+                  value={appSourceCode}
+                  onChange={(e) => setAppSourceCode(e.target.value)}
+                  placeholder={"// Paste your app's page and component files here\n// This helps the AI understand UI concepts like\n// 'Pipeline Value' = SUM(Deal.amount)"}
+                  rows={12}
+                  fill
+                  growVertically={false}
+                />
+              </FormGroup>
+            )}
+          </div>
 
           {error && (
             <Callout intent="danger" icon="error" className="mb-16">

@@ -68,48 +68,98 @@ export async function startContainer(containerId: string): Promise<number> {
 }
 
 /**
- * Extract source code from a Docker image by creating a temp container
- * and copying files out. Returns concatenated source as a single string.
+ * Extract source code from a Docker image. Tries the image first,
+ * then falls back to reading from the local filesystem if the image
+ * is a production build without original source files.
  */
 export async function extractSourceFromImage(dockerImage: string): Promise<string> {
-  const docker = new Docker();
-  const containerName = `glossary-extract-${Date.now()}`;
+  // File extensions to include
+  const exts = ["tsx", "ts", "jsx", "js", "vue", "svelte"];
+  const extArgs = exts.map(e => `-name '*.${e}'`).join(" -o ");
 
-  // Create container without starting it
-  const container = await docker.createContainer({
-    Image: dockerImage,
-    name: containerName,
-    Cmd: ["true"],
-  });
+  // Try extracting from Docker image first
+  const dirs = ["/app/src", "/app/app", "/app/pages", "/app/components", "/src"];
+  for (const dir of dirs) {
+    try {
+      const result = execSync(
+        `docker run --rm --entrypoint="" ${dockerImage} sh -c "find ${dir} -type f \\( ${extArgs} \\) -not -path '*/node_modules/*' -not -path '*/.next/*' 2>/dev/null | head -50 | while read f; do echo '===FILE:' \\$f '==='; cat \\$f 2>/dev/null; done"`,
+        { encoding: "utf8", timeout: 30_000, maxBuffer: 5 * 1024 * 1024 }
+      );
+      if (result.trim() && result.includes("===FILE:")) {
+        return result;
+      }
+    } catch {
+      continue;
+    }
+  }
 
-  try {
-    // Common source directories in Docker images
-    const dirs = ["/app/src", "/app/app", "/app/pages", "/app/components", "/src", "/app"];
-    // File extensions to include
-    const exts = "tsx,ts,jsx,js,vue,svelte,html";
+  console.log("[docker] No source in image (production build). Trying local filesystem...");
 
-    let source = "";
+  // Fallback: try to find source locally based on image name
+  // e.g., "demo-crm-app:latest" → look in "../demo-crm/src" relative to repo root
+  const imageName = dockerImage.split(":")[0].replace(/-app$/, "");
+  const fs = await import("fs");
+  const path = await import("path");
 
-    for (const dir of dirs) {
-      try {
-        // Use docker cp via CLI to extract, then read files
-        const result = execSync(
-          `docker run --rm --entrypoint="" ${dockerImage} sh -c "find ${dir} -type f \\( ${exts.split(",").map(e => `-name '*.${e}'`).join(" -o ")} \\) 2>/dev/null | head -50 | while read f; do echo '===FILE:' \\$f '==='; cat \\$f 2>/dev/null; done"`,
-          { encoding: "utf8", timeout: 30_000, maxBuffer: 5 * 1024 * 1024 }
-        );
-        if (result.trim()) {
-          source += result;
-          break; // Found source in this dir, stop looking
-        }
-      } catch {
-        continue;
+  // Resolve repo root: backend is at platform/backend/, so go up 2 levels
+  const repoRoot = path.resolve(process.cwd(), "..", "..");
+  const candidates = [
+    path.join(repoRoot, imageName, "src"),
+    path.join(repoRoot, imageName, "app"),
+    path.join(repoRoot, imageName),
+    // Also try from cwd directly
+    path.join(process.cwd(), "..", "..", imageName, "src"),
+  ];
+
+  console.log("[docker] Trying local paths:", candidates);
+
+  for (const dir of candidates) {
+    if (!fs.existsSync(dir)) continue;
+    console.log(`[docker] Found directory: ${dir}`);
+    try {
+      // Use node to read files instead of shell find (more portable)
+      const source = readSourceDir(dir, exts);
+      if (source.trim()) {
+        console.log(`[docker] Extracted ${source.length} chars from ${dir}`);
+        return source;
+      }
+    } catch (err) {
+      console.error(`[docker] Error reading ${dir}:`, err);
+      continue;
+    }
+  }
+
+  return "";
+}
+
+/** Recursively read source files from a directory */
+function readSourceDir(dir: string, exts: string[], maxFiles = 50): string {
+  const fs = require("fs");
+  const path = require("path");
+  let result = "";
+  let count = 0;
+
+  function walk(d: string) {
+    if (count >= maxFiles) return;
+    const entries = fs.readdirSync(d, { withFileTypes: true });
+    for (const entry of entries) {
+      if (count >= maxFiles) return;
+      const full = path.join(d, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules" || entry.name === ".next" || entry.name === ".git") continue;
+        walk(full);
+      } else if (exts.some((ext: string) => entry.name.endsWith(`.${ext}`))) {
+        try {
+          const content = fs.readFileSync(full, "utf8");
+          result += `===FILE: ${full} ===\n${content}\n\n`;
+          count++;
+        } catch {}
       }
     }
-
-    return source;
-  } finally {
-    try { await container.remove({ force: true }); } catch {}
   }
+
+  walk(dir);
+  return result;
 }
 
 /**
