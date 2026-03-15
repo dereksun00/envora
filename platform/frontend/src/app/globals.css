@@ -356,7 +356,7 @@ body:not(.bp5-dark) .sandbox-row {
 
 .sandbox-time {
   font-size: 12px;
-  opacity: 0.5;
+  color: rgba(246, 247, 249, 0.5);
 }
 
 /* ---- Step indicator ---- */
