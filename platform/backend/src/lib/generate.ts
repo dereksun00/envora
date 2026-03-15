@@ -28,7 +28,8 @@ Rules (MUST follow all):
 - Use ISO 8601 timestamps spread across the last 6 months
 - Use ~30% NULLs in nullable columns
 - Match exact enum casing from the schema (e.g., 'mid_market' not 'Mid_Market', 'closed_won' not 'Closed_Won')
-- Output raw SQL only — NO markdown fences, NO commentary, NO explanations
+- If the scenario specifies any numeric targets or totals (e.g. "2.1 million pipeline", "500k revenue", "1.5 billion ARR"), you MUST use a <scratchpad> first: list every row value you plan to insert, sum them, and adjust until they match the target exactly — THEN write the SQL
+- Output format: optional <scratchpad>...</scratchpad> block first, then raw SQL INSERT statements. The scratchpad will be stripped from the final output
 - Every INSERT statement must end with a semicolon`;
 
   const demoUsersText =
@@ -43,9 +44,7 @@ Rules (MUST follow all):
 Schema:
 ${params.schema}
 
-Scenario: ${scenarioPrompt}${demoUsersText}
-
-Output raw SQL INSERT statements only. No markdown fences, no commentary.`;
+Scenario: ${scenarioPrompt}${demoUsersText}`;
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
@@ -60,6 +59,9 @@ Output raw SQL INSERT statements only. No markdown fences, no commentary.`;
   }
 
   let sql = content.text;
+
+  // Strip scratchpad block if present
+  sql = sql.replace(/<scratchpad>[\s\S]*?<\/scratchpad>/i, "").trim();
 
   // Strip any accidental markdown fences
   sql = sql.replace(/^```sql\s*/i, "").replace(/^```\s*/m, "").replace(/\s*```$/i, "").trim();

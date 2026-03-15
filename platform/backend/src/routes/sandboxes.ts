@@ -177,15 +177,18 @@ sandboxRoutes.patch("/:id", async (req, res) => {
             .json({ error: "Can only start a stopped or expired sandbox" });
           return;
         }
+        let newPort = sandbox.hostPort;
         if (sandbox.containerId) {
-          await startContainer(sandbox.containerId);
+          newPort = await startContainer(sandbox.containerId);
         }
-        // Re-extend expiry by 2 hours on start
+        // Re-extend expiry by 2 hours on start, update port/url in case Docker reassigned
         const started = await prisma.sandbox.update({
           where: { id: sandbox.id },
           data: {
             status: "running",
             statusMessage: "Sandbox is running",
+            hostPort: newPort,
+            url: newPort ? `http://localhost:${newPort}` : sandbox.url,
             expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
           },
         });

@@ -54,12 +54,16 @@ export async function stopContainer(containerId: string): Promise<void> {
 }
 
 /**
- * Start a stopped Docker container.
+ * Start a stopped Docker container and return the newly assigned host port.
  */
-export async function startContainer(containerId: string): Promise<void> {
+export async function startContainer(containerId: string): Promise<number> {
   const docker = new Docker();
   const container = docker.getContainer(containerId);
   await container.start();
+  const info = await container.inspect();
+  const ports = info.NetworkSettings.Ports;
+  const firstBinding = Object.values(ports).find((b) => b && b.length > 0);
+  return parseInt(firstBinding?.[0]?.HostPort ?? "0", 10);
 }
 
 /**
