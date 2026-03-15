@@ -83,8 +83,16 @@ scenarioRoutes.put("/:scenarioId", async (req: Request<ScenarioParams>, res) => 
 
   const data: any = {};
   if (name !== undefined) data.name = name;
-  if (prompt !== undefined) data.prompt = prompt;
-  if (demoUsers !== undefined) data.demoUsers = JSON.stringify(demoUsers);
+  if (prompt !== undefined) {
+    data.prompt = prompt;
+    // Clear cached SQL so the next sandbox regenerates data from the new prompt
+    if (prompt !== scenario.prompt) data.generatedSQL = null;
+  }
+  if (demoUsers !== undefined) {
+    data.demoUsers = JSON.stringify(demoUsers);
+    // Clear cache if demo users changed too
+    if (JSON.stringify(demoUsers) !== scenario.demoUsers) data.generatedSQL = null;
+  }
   if (featureFlags !== undefined)
     data.featureFlags = JSON.stringify(featureFlags);
 

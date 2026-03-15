@@ -6,6 +6,8 @@
 // See ../../shared/types.ts for all request/response shapes.
 // =============================================================================
 
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import { projectRoutes } from "./routes/projects.js";

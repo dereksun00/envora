@@ -28,7 +28,7 @@ export async function launchContainer(
 
   const container = await docker.createContainer({
     Image: dockerImage,
-    Env: [`DATABASE_URL=${databaseUrl}`, `PORT=${appPort}`],
+    Env: [`DATABASE_URL=${databaseUrl}`, `PORT=${appPort}`, `SKIP_SEED=true`],
     ExposedPorts: { [`${appPort}/tcp`]: {} },
     HostConfig: {
       PortBindings: { [`${appPort}/tcp`]: [{ HostPort: "0" }] },
